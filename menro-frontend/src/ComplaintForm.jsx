@@ -30,32 +30,39 @@ const ComplaintForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true); // Turn on the loading state
+    const submitPayload = new FormData();
     
-    // 1. Create a FormData object to hold text AND files
-    const formData = new FormData();
-    formData.append('title', title); // replace 'title' with your state variable names
-    formData.append('location_address', locationAddress); 
-    formData.append('description', description);
+    // Grab the specific values out of your 'formData' state object
+    submitPayload.append('title', formData.title); 
+    submitPayload.append('location_address', formData.location_address); 
+    submitPayload.append('description', formData.description);
     
-    // 2. Only append the photo if they actually selected one
+    // Append the photo if it exists
     if (photo) {
-      formData.append('photo', photo);
+      submitPayload.append('photo', photo);
     }
 
     try {
-      // 3. Send it to Laravel. Notice the special 'headers' configuration!
-      await axios.post('/api/complaints', formData, {
+      // Send the payload to Laravel
+      await axios.post('/api/complaints', submitPayload, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
       
       alert('Complaint submitted successfully!');
-      // Reset your form here...
-
+      
+      // Optional: Clear the form after success
+      setFormData({ title: '', location_address: '', description: '' });
+      setPhoto(null);
+      navigate('/'); // Go back to the home page
       
     } catch (error) {
       console.error("Submission failed", error);
+      setErrorMessage('Failed to submit complaint. Please try again.');
+    } finally {
+      setIsSubmitting(false); // Turn off the loading state
     }
   };
 
@@ -125,14 +132,7 @@ const ComplaintForm = () => {
           ></textarea>
         </div>
 
-        {/* Photo Evidence (UI Only for now) */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-900 mb-2">Photo Evidence (Optional)</label>
-          <div className="w-full p-8 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors">
-            <svg className="w-8 h-8 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            <span className="text-sm text-gray-600">Click to take a photo or upload from gallery</span>
-          </div>
-        </div>
+      
 
         {/* Info Note */}
         <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
@@ -144,16 +144,45 @@ const ComplaintForm = () => {
           </p>
         </div>
 
-        <div>
+
+          
+        {/* Unified & Functional Photo Upload */}
+        <div className="mb-6">
           <label className="block text-gray-800 text-sm font-bold mb-2">Photo Evidence (Optional)</label>
-          <input 
-            type="file" 
-            accept="image/*"
-            onChange={(e) => setPhoto(e.target.files[0])} 
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
-          />
-          <p className="text-xs text-gray-500 mt-1">Max file size: 5MB. Accepted formats: JPG, PNG.</p>
+          <div className="flex items-center justify-center w-full">
+            {/* The label acts as the clickable area, tied to the hidden input via htmlFor */}
+            <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition-colors">
+              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                
+                {/* Camera Icon */}
+                <svg className="w-8 h-8 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+
+                {/* Dynamic Text: Shows filename if selected, otherwise shows default text */}
+                <p className="mb-2 text-sm text-gray-500">
+                  {photo ? (
+                    <span className="font-semibold text-green-600">Selected: {photo.name}</span>
+                  ) : (
+                    <span>Click to take a photo or upload from gallery</span>
+                  )}
+                </p>
+                <p className="text-xs text-gray-400">Max file size: 5MB. Accepted formats: JPG, PNG.</p>
+              </div>
+
+              {/* The actual functional input, hidden from view! */}
+              <input 
+                id="dropzone-file" 
+                type="file" 
+                accept="image/png, image/jpeg, image/jpg"
+                className="hidden" 
+                onChange={(e) => setPhoto(e.target.files[0])} 
+              />
+            </label>
+          </div>
         </div>
+  
         
         {/* Submit Button */}
         <button 
